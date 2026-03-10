@@ -6,3 +6,8 @@ venv/
 env/
 *.log
 .DS_Store
+
+# File I dont want to track
+journal.json
+practice.py
+trading.bat
