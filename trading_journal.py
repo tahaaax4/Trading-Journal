@@ -1,5 +1,4 @@
 from tabulate import tabulate
-import datetime
 import sqlite3
 
 # Making Connection
@@ -410,7 +409,7 @@ def main():
                 else:
                     print("Goodbye!")
                     break    
-                
+
             except ValueError:
                 print("Please Enter Number.")   
     finally:
