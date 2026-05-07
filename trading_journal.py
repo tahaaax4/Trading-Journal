@@ -1,81 +1,201 @@
-import json
-from pathlib import Path
 from tabulate import tabulate
 import datetime
+import sqlite3
 
-BASE_DIR = Path(__file__).resolve().parent
-journal = BASE_DIR / "journal.json"
-trades = []
+# Making Connection
+def get_connection(db_name):
 
-def load_trade(journal):
-    
-    if not journal.exists():
-        return []
+    # Connecting to Database
     try:
-        with open(journal, 'r') as file:
-            data = json.load(file)
-            return data
-    except json.JSONDecodeError:
-        return []    
-        
-def add_trade(trades):
+        return sqlite3.connect(db_name)
+    except Exception as e:
+        print(f"ERROR: {e}")
+
+# Creating Table
+def create_table(connection):
+
+    # Query: Creating Table
+    query = """CREATE TABLE IF NOT EXISTS trades(
+        id INTEGER PRIMARY KEY,
+        date TEXT,
+        pair TEXT,
+        position TEXT,
+        entry_price REAL,
+        exit_price REAL,
+        timeframe TEXT,
+        result TEXT,
+        risk_percent REAL,
+        total_rr REAL,
+        profit_loss REAL,
+        emotion TEXT,
+        strategy TEXT,
+        rule TEXT,
+        NOTES TEXT
+        )"""
+    
+    # Execute Query
+    try:
+        with connection:
+            connection.execute(query)
+    except Exception as e:
+        print(f"ERROR: {e}")
+
+# Take Trade and give clean Data
+def add_trade():
+
+    date = input("Date: ").strip()
     pair = input("Pair: ").capitalize().strip()
 
+    # Position
+    while True:
+        position = input("Position (Long/Short): ").lower().strip()
+
+        if position and position[0] == "l":
+            position = "Long"
+            break
+        elif position and position[0] == "s":
+            position = "Short"
+            break
+        else:
+            print("Enter Long or Short")
+
+    # Prices
+    while True:
+        try:
+            entry_price = float(input("Entry Price: "))
+            exit_price = float(input("Exit Price: "))
+            break
+        except ValueError:
+            print("Enter valid numbers")
+
+    # Timeframe
+    while True:
+        try:
+            timeframe = int(input("Timeframe: "))
+            break
+        except ValueError:
+            print("Enter a number")
+
+    # Result
     while True:
         result = input("Result (Win/Loss): ").lower().strip()
+
         if result and result[0] == "w":
             result = "Win"
             break
-        if result and result[0] == "l":
+        elif result and result[0] == "l":
             result = "Loss"
             break
         else:
             print("Enter Win or Loss")
 
-      
+    # Risk + RR
     while True:
         try:
-            risk = float(input("Risk %: "))
+            risk_percent = float(input("Risk %: "))
+            total_rr = float(input("RR: "))
             break
         except ValueError:
-            print("Please Enter Number.")  
+            print("Enter valid numbers")
 
+    # PROFIT/LOSS 
     while True:
         try:
-            Profit_Loss = float(input("Profit/Loss Amount: "))
+            profit_loss = float(input("Profit/Loss: "))
             break
         except ValueError:
-            print("Please Enter Number.")
+            print("Enter valid number")
 
     if result == "Loss":
-        Profit_Loss = -abs(Profit_Loss)
-    if result == "Win":
-        Profit_Loss = +abs(Profit_Loss)
+        profit_loss = -abs(profit_loss)
+    else:
+        profit_loss = abs(profit_loss)
 
+    # Extra Data
     emotion = input("Emotion: ").capitalize().strip()
+    strategy = input("Strategy: ").capitalize().strip()
+
+    # Rule
+    while True:
+        rule = input("Followed plan? (y/n): ").lower().strip()
+
+        if rule and rule[0] == "y":
+            rule = "Yes"
+            break
+        elif rule and rule[0] == "n":
+            rule = "No"
+            break
+        else:
+            print("Enter y or n")
+
     notes = input("Notes: ").capitalize().strip()
 
-    if trades:
-        new_trade_no = max(t["Trade No"] for t in trades) + 1
-    else:
-        new_trade_no = 1
-            
-    trades.append({
-        "Trade No" : new_trade_no,
-        "Date" : str(datetime.date.today().strftime("%d-%m-%Y")),
-        "Pair" : pair,
-        "Result" : result,
-        "Profit/Loss" : Profit_Loss,
-        "Risk" : risk,
-        "Emotion" : emotion,
-        "Notes" : notes
-    })
+    # Final Clean Data
+    trade_data = {
+        "date": date,
+        "pair": pair,
+        "position": position,
+        "entry_price": entry_price,
+        "exit_price": exit_price,
+        "timeframe": timeframe,
+        "result": result,
+        "risk_percent": risk_percent,
+        "total_rr": total_rr,
+        "profit_loss": profit_loss,
+        "emotion": emotion,
+        "strategy": strategy,
+        "rule": rule,
+        "notes": notes
+    }
 
-    print("Trade Added Successfully")
+    return trade_data
 
-def save_trades(trades):
-    with open(journal, 'w') as f:
-        json.dump(trades, f, indent=4)
+# Insert Table
+def insert_trade(connection, trade):
+
+    # Query: Values To Table
+    query = """
+    INSERT INTO trades (
+        date,
+        pair,
+        position,
+        entry_price,
+        exit_price,
+        timeframe,
+        result,
+        risk_percent,
+        total_rr,
+        profit_loss,
+        emotion,
+        strategy,
+        rule,
+        notes
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    # Execute the Query
+    try:
+        with connection:
+            connection.execute(query, (
+                trade["date"],
+                trade["pair"],
+                trade["position"],
+                trade["entry_price"],
+                trade["exit_price"],
+                trade["timeframe"],
+                trade["result"],
+                trade["risk_percent"],
+                trade["total_rr"],
+                trade["profit_loss"],
+                trade["emotion"],
+                trade["strategy"],
+                trade["rule"],
+                trade["notes"]
+            ))
+        print("Trade inserted successfully.")
+    
+    except Exception as e:
+        print(f"Database Error: {e}")
 
 def show_trades():
     try:
@@ -238,8 +358,10 @@ def filtered_trades(trades):
 
 def main():
 
-    trades = load_trade(journal)
-
+    # Variable
+    connection  = get_connection("trades.db")
+    
+    # Main Loop
     while True:
         print("=========================")
         print("✒️ 1.Add Trade")
@@ -253,8 +375,10 @@ def main():
         try:
             user = int(input("Enter Number: "))
             if user == 1:
-                add_trade(trades)
-                save_trades(trades)
+
+                # Giving get_connection() and add_trade() --> return
+                trade = add_trade()
+                insert_trade(connection, trade)
             elif user == 2:
                 show_trades()
             elif user == 3:
