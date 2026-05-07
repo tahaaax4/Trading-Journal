@@ -11,3 +11,5 @@ env/
 journal.json
 practice.py
 trading.bat
+trades.db
+practice1.py

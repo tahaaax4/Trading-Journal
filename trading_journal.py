@@ -30,7 +30,7 @@ def create_table(connection):
         emotion TEXT,
         strategy TEXT,
         rule TEXT,
-        NOTES TEXT
+        Notes TEXT
         )"""
     
     # Execute Query
@@ -113,7 +113,7 @@ def add_trade():
 
     # Extra Data
     emotion = input("Emotion: ").capitalize().strip()
-    strategy = input("Strategy: ").capitalize().strip()
+    strategy = input("Strategy (Breakout, Reversal, Continuation, Ranging): ").capitalize().strip()
 
     # Rule
     while True:
@@ -197,28 +197,33 @@ def insert_trade(connection, trade):
     except Exception as e:
         print(f"Database Error: {e}")
 
-def show_trades():
+# Show All Trades
+def show_trades(connection):
+    
+    # Query: Show Table
+    query = "SELECT * FROM trades"
+
+    # Shows Trades
     try:
-        with open(journal, 'r', encoding='utf-8') as f:
-            content = f.read().strip()
+        with connection:
 
-            if not content:
-                print("No trades recorded yet.")
-                return
-            
-            data = json.loads(content)
+            # Cursor: Description for headers Data
+            cursor = connection.cursor()
+            cursor.execute(query)
 
-            table = [[t["Trade No"], t["Date"], t["Pair"], t["Result"], f'{t["Risk"]}%', f"{t['Profit/Loss']:+}", t["Emotion"], t["Notes"]] for t in data]
+            # Headers
+            headers = [description[0] for description in cursor.description]
 
-            headers = ["No", "Date", "Pair", "Result", "Risk", "Profit/Loss", "Emotion", "Notes"]
+            # Row
+            rows = cursor.fetchall()
 
-            print(tabulate(table, headers, tablefmt="fancy_grid"))
+            # Combine: Tabulate
+            print(tabulate(rows, headers=headers, tablefmt = "fancy_grid"))
 
-    except FileNotFoundError:
-        print("File Not Found")
-    except json.JSONDecodeError as e:
-        print("Error reading journal:", e)
+    except Exception as e:
+        print(f"ERROR: {e}")
 
+"""
 def reset_journal():
 
     while True:
@@ -354,43 +359,64 @@ def filtered_trades(trades):
         
     headers = ["No", "Date" , "Pair", "Result", "Risk", "Profit/Loss", "Emotion", "Notes"]
         
-    print(tabulate(table, headers, tablefmt="fancy_grid"))
+    print(tabulate(table, headers, tablefmt="fancy_grid")) """
 
+# Main Function
 def main():
 
-    # Variable
+    # Connection Var
     connection  = get_connection("trades.db")
     
     # Main Loop
-    while True:
-        print("=========================")
-        print("✒️ 1.Add Trade")
-        print("📜 2.Show Trades")
-        print("📁 3.Show Summary")
-        print("🔍 4.Filter Trades")
-        print("🏳️ 5.Reset Journal")
-        print("❌ 6.Exit")
-        print("=========================")
+    try:
 
-        try:
-            user = int(input("Enter Number: "))
-            if user == 1:
+        # Calling Table
+        create_table(connection)
 
-                # Giving get_connection() and add_trade() --> return
-                trade = add_trade()
-                insert_trade(connection, trade)
-            elif user == 2:
-                show_trades()
-            elif user == 3:
-                show_summary(trades)
-            elif user == 4:
-                filtered_trades(trades)
-            elif user == 5:
-                reset_journal()    
-            else:
-                print("Goodbye!")
-                break    
-        except ValueError:
-            print("Please Enter Number.")            
+        while True:
+            print("=========================")
+            print("✒️ 1.Add Trade")
+            print("📜 2.Show Trades")
+            print("📁 3.Show Summary")
+            print("🔍 4.Filter Trades")
+            print("🏳️ 5.Reset Journal")
+            print("❌ 6.Exit")
+            print("=========================")
+
+            try:
+                user = int(input("Enter Number: "))
+
+       
+                if user == 1:
+
+                    # Giving get_connection() and add_trade() --> return
+                    trade = add_trade()
+                    insert_trade(connection, trade)
+
+                elif user == 2:
+
+                    # Show Trades
+                    show_trades(connection)
+
+                elif user == 3:
+                    pass
+
+                elif user == 4:
+                    pass
+
+                elif user == 5:
+                    pass    
+
+                else:
+                    print("Goodbye!")
+                    break    
+                
+            except ValueError:
+                print("Please Enter Number.")   
+    finally:
+        connection.close()         
         
-main()
+
+# Calling
+if __name__ == "__main__":
+    main()
