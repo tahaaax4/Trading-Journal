@@ -191,7 +191,9 @@ def insert_trade(connection, trade):
                 trade["rule"],
                 trade["notes"]
             ))
-        print("Trade inserted successfully.")
+        print("--------------------------------")
+        print("Trade Added successfully.")
+        print("--------------------------------")
     
     except Exception as e:
         print(f"Database Error: {e}")
@@ -222,20 +224,66 @@ def show_trades(connection):
     except Exception as e:
         print(f"ERROR: {e}")
 
-"""
-def reset_journal():
+# Reset All Trades 
+def delete_trade(connection):
 
+    # Asking 
+    print("1. Delete Trade")
+    print("2. Reset")
+
+    # Choice Input Delete Or Reset
     while True:
-        user = input("Are You Sure? (y/n): ")
-        if user == 'y':
-            with open (journal, 'w') as f:
-                f.write("[]")
-                print("Journal has been Reset.")
+        try:
+            choice = int(input("Enter Number: "))
+            if choice != 1 and choice != 2:
+                print("Enter 1 or 2.")
+            else:
                 break
-        else:
-            print("Ok!")
-            break   
+        except ValueError:
+            print("Enter number")
 
+    # If Choice Is 1
+    if choice == 1:
+
+        while True:
+
+            # Get Id For Trade Delete
+            try:
+                trade_id = int(input("Enter Trade id: "))
+                break
+            except ValueError:
+                print("Enter id")
+
+        # Query: Delete
+        del_query = "DELETE FROM trades WHERE id = ?"
+
+        # Execute Query
+        try:
+            with connection:
+                connection.execute(del_query, (trade_id,))
+                print("--------------------------------------")
+                print(f"Trade id '{trade_id} id deleted'")
+                print("--------------------------------------")
+        except Exception as e:
+            print(f"ERROR: {e}")
+
+    # If Choice Is 2
+    if choice == 2:
+
+        # Query: Reset
+        reset_query = "DROP TABLE IF EXISTS trades"
+
+        # Execute Query
+        try:
+            with connection:
+                connection.execute(reset_query)
+                print("----------------------------")
+                print("Journal Has Been Reset")
+                print("----------------------------")
+        except Exception as e:
+            print(f"ERROR: {e}")
+
+"""
 def avg_risk(trades):
 
     if not trades:
@@ -378,7 +426,7 @@ def main():
             print("📜 2.Show Trades")
             print("📁 3.Show Summary")
             print("🔍 4.Filter Trades")
-            print("🏳️ 5.Reset Journal")
+            print("🏳️ 5.Delete Trades")
             print("❌ 6.Exit")
             print("=========================")
 
@@ -402,9 +450,10 @@ def main():
 
                 elif user == 4:
                     pass
-
+                
+                # Delete Or Reset Trades
                 elif user == 5:
-                    pass    
+                    delete_trade(connection)  
 
                 else:
                     print("Goodbye!")
