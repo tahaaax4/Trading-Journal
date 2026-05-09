@@ -80,10 +80,10 @@ def add_trade():
         result = input("Result (Win/Loss): ").lower().strip()
 
         if result and result[0] == "w":
-            result = "Win"
+            result = "win"
             break
         elif result and result[0] == "l":
-            result = "Loss"
+            result = "loss"
             break
         else:
             print("Enter Win or Loss")
@@ -105,9 +105,10 @@ def add_trade():
         except ValueError:
             print("Enter valid number")
 
-    if result == "Loss":
+    if result == "loss":
         profit_loss = -abs(profit_loss)
-    else:
+
+    elif result == "win":
         profit_loss = abs(profit_loss)
 
     # Extra Data
@@ -217,6 +218,9 @@ def show_trades(connection):
 
             # Row
             rows = cursor.fetchall()
+            if not rows:
+                print("No trades found.")
+                return
 
             # Combine: Tabulate
             print(tabulate(rows, headers=headers, tablefmt = "fancy_grid"))
@@ -271,7 +275,7 @@ def delete_trade(connection):
     if choice == 2:
 
         # Query: Reset
-        reset_query = "DROP TABLE IF EXISTS trades"
+        reset_query = "DELETE FROM trades"
 
         # Execute Query
         try:
@@ -283,75 +287,160 @@ def delete_trade(connection):
         except Exception as e:
             print(f"ERROR: {e}")
 
+# Show Trading Summary
+def show_summary(connection):
+
+    # Query: Get all trades from database
+    query = "SELECT * FROM trades"
+
+    try:
+        with connection:
+
+            # Create cursor object
+            cursor = connection.cursor()
+
+            # Execute SQL query
+            cursor.execute(query)
+
+            # Fetch all rows from database
+            rows = cursor.fetchall()
+
+            # If no trades exist
+            if not rows:
+                print("No trades in database.")
+                return
+
+            # VARIABLES FOR CALCULATIONS
+            win = 0
+            loss = 0
+
+            total_profit = 0
+
+            total_win_amount = 0
+            total_loss_amount = 0
+
+            total_rr = 0
+            total_risk = 0
+
+            total_long = 0
+            total_short = 0
+
+            total_trades = len(rows)
+
+            # LOOP THROUGH EACH TRADE
+            for each_trade in rows:
+
+                # INDEX MAP
+                # 0 = id
+                # 1 = date
+                # 2 = pair
+                # 3 = position
+                # 4 = entry_price
+                # 5 = exit_price
+                # 6 = timeframe
+                # 7 = result
+                # 8 = risk_percent
+                # 9 = total_rr
+                # 10 = profit_loss
+                # 11 = emotion
+                # 12 = strategy
+                # 13 = rule
+                # 14 = notes
+
+                result = each_trade[7]
+                rr = each_trade[9]
+                profit = each_trade[10]
+                risk = each_trade[8]
+                position = each_trade[3]
+
+                # Count wins/losses
+                if result == "win":
+                    win += 1
+                    total_win_amount += profit
+
+                elif result == "loss":
+                    loss += 1
+                    total_loss_amount += abs(profit)
+
+                if position == "Long":
+                    total_long += 1
+
+                elif position == "Short":
+                    total_short += 1
+
+                # Add totals
+                total_profit += profit
+                total_rr += rr
+                total_risk += risk
+
+            # -----------------------------
+            # FINAL CALCULATIONS
+            # -----------------------------
+
+            # Winrate %
+            winrate = (win / total_trades) * 100
+
+            # Biggest winning trade
+            biggest_win = max(
+                t[10] for t in rows
+                if t[7].lower() == "win")
+
+            # Biggest losing trade
+            biggest_loss = min(
+                t[10] for t in rows
+                if t[7].lower() == "loss")
+
+            # Average calculations
+            avg_risk = total_risk / total_trades
+            avg_rr = total_rr / total_trades
+
+            avg_win = total_win_amount / win if win else 0
+            avg_loss = total_loss_amount / loss if loss else 0
+
+            # Expectancy formula
+            expectancy = (
+                (win / total_trades) * avg_win) - ((loss / total_trades) * avg_loss)
+
+            # Profit Factor
+            profit_factor = (
+                total_win_amount / total_loss_amount
+                if total_loss_amount != 0
+                else 0
+            )
+
+            # PRINT SUMMARY
+            print("------------------------------------------")
+            print(f"📝 Total Trades = {total_trades}")
+
+            print(f"✔️ Total Wins = {win}")
+            print(f"✖️ Total Losses = {loss}")
+
+            print(f"📈 Winrate = {winrate:.2f}%")
+
+            print(f"💰 Total Profit = {total_profit:.2f}")
+
+            print(f"📈 Total Long Trades = {total_long}")
+            print(f"📉 Total Short Trades = {total_short}")
+
+            print(f"📊 Average Win = {avg_win:.2f}")
+            print(f"📊 Average Loss = {avg_loss:.2f}")
+
+            print(f"📊 Average Risk = {avg_risk:.2f}%")
+            print(f"📊 Average RR = {avg_rr:.2f}")
+
+            print(f"🏆 Biggest Win = {biggest_win:.2f}")
+            print(f"📉 Biggest Loss = {biggest_loss:.2f}")
+
+            print(f"⚡ Profit Factor = {profit_factor:.2f}")
+
+            print(f"⌛ Expectancy Per Trade = {expectancy:.2f}")
+
+            print("------------------------------------------")
+
+    except Exception as e:
+        print(f"ERROR: {e}")
+
 """
-def avg_risk(trades):
-
-    if not trades:
-        return 0 
-        
-    total_risk = 0
-
-    for t in trades:
-        total_risk += t["Risk"]
-
-    avg_risk = total_risk / len(trades)
-
-    return avg_risk
-
-def show_summary(trades):
-
-    if not trades:
-        print("No Trade to Summarize")
-        return
-    
-    win = 0
-    loss = 0
-    total_profit = 0
-    total_win_amount = 0
-    total_loss_amount = 0
-
-    for t in trades:
-
-        if t["Result"].lower() == "win":
-            win += 1
-            total_win_amount += t["Profit/Loss"]
-        elif t["Result"].lower() == "loss":
-            loss += 1
-            total_loss_amount += abs(t["Profit/Loss"])
-
-        total_profit += t["Profit/Loss"]
-
-
-    trade = len(trades)
-
-    winrate = win / trade * 100
-    lossrate = loss / trade *100
-
-
-    biggest_win = max(t["Profit/Loss"] for t in trades)
-    biggest_loss = min(t["Profit/Loss"] for t in trades)
-    avg_risks = avg_risk(trades)
-    avg_win = total_win_amount / win if win else 0
-    avg_loss = total_loss_amount / loss if loss else 0
-
-    expectancy = (win / trade * avg_win) - (loss / trade *avg_loss)
-
-    print("------------------------------------------")
-    print(f"📝 Total Trades = {trade}")
-    print(f"✔️ Total Wins = {win}")
-    print(f"✖️ Total Loses = {loss}")
-    print(f"📈 Winrate = {winrate: .2f}%")
-    print(f"📊 Average Win = {avg_win: .2f}")
-    print(f"📊 Average Loss = {avg_loss: .2f}")
-    print(f"📊 Average Risk = {avg_risks: .2f}%")
-    print(f"📊 Total Win: {total_win_amount}")
-    print(f"📊 Total Loss: {total_loss_amount}")
-    print(f"📊 Bigges Win: {biggest_win}")
-    print(f"📊 Biggest Loss: {biggest_loss}")
-    print(f"📝 Total Profit = {total_profit: .2f}")
-    print(f"⌛ Expectancy per Trade {expectancy: .2f}")
-    print("------------------------------------------")
-
 def filtered_trades(trades):
 
     if not trades:
@@ -406,7 +495,8 @@ def filtered_trades(trades):
         
     headers = ["No", "Date" , "Pair", "Result", "Risk", "Profit/Loss", "Emotion", "Notes"]
         
-    print(tabulate(table, headers, tablefmt="fancy_grid")) """
+    print(tabulate(table, headers, tablefmt="fancy_grid")) 
+"""
 
 # Main Function
 def main():
@@ -446,7 +536,7 @@ def main():
                     show_trades(connection)
 
                 elif user == 3:
-                    pass
+                    show_summary(connection)
 
                 elif user == 4:
                     pass
