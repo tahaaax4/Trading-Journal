@@ -68,12 +68,7 @@ def add_trade():
             print("Enter valid numbers")
 
     # Timeframe
-    while True:
-        try:
-            timeframe = int(input("Timeframe: "))
-            break
-        except ValueError:
-            print("Enter a number")
+        timeframe = input("Timeframe: ").upper().strip()
 
     # Result
     while True:
@@ -325,6 +320,9 @@ def show_summary(connection):
             total_long = 0
             total_short = 0
 
+            long_wins = 0
+            short_wins = 0
+
             total_trades = len(rows)
 
             # LOOP THROUGH EACH TRADE
@@ -368,6 +366,15 @@ def show_summary(connection):
                 elif position == "Short":
                     total_short += 1
 
+                # Wins Longs/Shorts
+                if position == "Long" and result == "win":
+                    long_wins += 1
+
+                elif position == "Short" and result == "win":
+                    short_wins += 1
+
+
+
                 # Add totals
                 total_profit += profit
                 total_rr += rr
@@ -396,6 +403,17 @@ def show_summary(connection):
 
             avg_win = total_win_amount / win if win else 0
             avg_loss = total_loss_amount / loss if loss else 0
+
+            # Long/Short Winrate
+            if total_long:
+                long_winrate = (long_wins / total_long) * 100
+            else:
+                long_winrate = 0
+            
+            if total_short:
+                short_winrate = (short_wins / total_short) * 100
+            else:
+                short_winrate = 0
 
             # Expectancy formula
             expectancy = (
@@ -431,6 +449,9 @@ def show_summary(connection):
             print(f"🏆 Biggest Win = {biggest_win:.2f}")
             print(f"📉 Biggest Loss = {biggest_loss:.2f}")
 
+            print(f"📈 Long Winrate = {long_winrate}")
+            print(f"📉 Short Winrate = {short_winrate}")
+
             print(f"⚡ Profit Factor = {profit_factor:.2f}")
 
             print(f"⌛ Expectancy Per Trade = {expectancy:.2f}")
@@ -440,63 +461,115 @@ def show_summary(connection):
     except Exception as e:
         print(f"ERROR: {e}")
 
-"""
-def filtered_trades(trades):
+# Display Query For Filetered Object
+def display_query(connection, query, values=()):
 
-    if not trades:
-        print("No Trades to Filter")
+    try:
+        with connection:
+            # Cursor: Description for headers Data
+            cursor = connection.cursor()
+            cursor.execute(query, values)
 
-    print("'''''''''''''''''''''")
-    print("🗓️ Filter By:")
-    print("💡 1.Pair")
-    print("📉 2.Win/Loss")
-    print("📆 3.Date")
-    print("💡 4.Exit Filter")
-    print("'''''''''''''''''''''")
+            # Headers
+            headers = [description[0] for description in cursor.description]
 
-    filtered = []
-    
+            # Row
+            rows = cursor.fetchall()
+            if not rows:
+                print("No trades found.")
+                return
+
+            # Combine: Tabulate
+            print(tabulate(rows, headers=headers, tablefmt = "fancy_grid"))
+
+    except Exception as e:
+                    print(f"ERROR: {e}")
+
+# Filtering Trdes
+def filtered_trades(connection):
+
     while True:
+        print("''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''")
+        print("🗓️ Filter By:")
+        print("💡 1. Pair")
+        print("📉 2. Win/Loss")
+        print("📈 3. Long/Short")
+        print("💡 4. Strategy (Breakout, Ranging, Continutaion, Reversal)")
+        print("⚠️ 5. Rule")
+        print("📆 6. Date")
+        print("🔺 7. Profitability")
+        print("🔻 8. Losing trades")
+        print("💰 9. RR")
+        print("👋 0. Exit")
+        print("''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''")
+    
         try:
-            choice = int(input("Enter a number: "))
+            choice = int(input("Enter a Pair: "))
+
+            # Break
+            if choice == 0:
+                print("👋 GoodBye..")
+                break
+
+            # Pair
             if choice == 1:
-                pair = input("Enter Pair: ").capitalize().strip()
-                for t in trades:
-                    if t["Pair"] == pair:
-                        filtered.append(t)
+                pair_choice = input("Enter Pair Name: ")
 
+                query = "SELECT * FROM trades WHERE pair = ?"
+
+                display_query(connection, query, (pair_choice,))
+
+            # Result
             elif choice == 2:
-                result = input("Enter Win and Loss: ").capitalize().strip()
-                for t in trades:
-                    if t["Result"][0] == result[0]:
-                        filtered.append(t)
+                result_choice = input("Enter Win/Loss: ").lower().strip()
+                query = "SELECT * FROM trades WHERE result = ?"
+                display_query(connection, query, (result_choice,))
 
+            # Position
             elif choice == 3:
-                date = input("Enter the Date(\"%d-%w-%Y\"): ").strip()
-                for t in trades:
-                    if t["Date"] == date:
-                        filtered.append(t)
-            
+                position_choice = input("Enter Long/Short: ").capitalize().strip()
+                query = "SELECT * FROM trades WHERE position = ?"
+                display_query(connection, query, (position_choice,))
+
+            # Strategy
+            elif choice == 4:
+                strategy_choice = input("Enter Strategy: ").capitalize().strip()
+                query = "SELECT * FROM trades WHERE strategy = ?"
+                display_query(connection, query, (strategy_choice,))
+
+            # Rule
+            elif choice == 5:
+                rule_choice = input("Followed Rules? (Yes/No): ").capitalize().strip()
+                query = "SELECT * FROM trades WHERE rule = ?"
+                display_query(connection, query, (rule_choice,))
+
+            # Date
+            elif choice == 6:
+                date_choice = input("Enter Date: ").strip()
+                query = "SELECT * FROM trades WHERE date = ?"
+                display_query(connection, query, (date_choice,))
+
+            # Profitability
+            elif choice == 7:
+                query = "SELECT * FROM trades WHERE profit_loss > 0"
+                display_query(connection, query)
+
+            # Losing Trades
+            elif choice == 8:
+                query = "SELECT * FROM trades WHERE profit_loss < 0"
+                display_query(connection, query)
+
+            # RR
+            elif choice == 9:
+                rr_choice = float(input("Enter Minimum RR: "))
+                query = "SELECT * FROM trades WHERE total_rr >= ?"
+                display_query(connection, query, (rr_choice,))
+
             else:
                 print("Invalid Input")
-            break
+
         except ValueError:      
             print("Enter Valid Number.")
-
-    if not filtered:
-        print("No Trade found for this filtered")
-        return
-
-    table = []
-    for i, t in enumerate(filtered, start=1):
-        table.append([
-            i, t["Date"], t["Pair"], t["Result"], f'{t["Risk"]}%', f"{t['Profit/Loss']:+}", t["Emotion"], t["Notes"]
-            ])
-        
-    headers = ["No", "Date" , "Pair", "Result", "Risk", "Profit/Loss", "Emotion", "Notes"]
-        
-    print(tabulate(table, headers, tablefmt="fancy_grid")) 
-"""
 
 # Main Function
 def main():
@@ -539,15 +612,19 @@ def main():
                     show_summary(connection)
 
                 elif user == 4:
-                    pass
+                    filtered_trades(connection)
                 
                 # Delete Or Reset Trades
                 elif user == 5:
                     delete_trade(connection)  
 
-                else:
+                # Break
+                elif user == 6:
                     print("Goodbye!")
-                    break    
+                    break
+
+                else:
+                    print("Invalid Input")  
 
             except ValueError:
                 print("Please Enter Number.")   
