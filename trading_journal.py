@@ -1,5 +1,6 @@
 from tabulate import tabulate
 import sqlite3
+import csv
 
 # Making Connection
 def get_connection(db_name):
@@ -571,6 +572,42 @@ def filtered_trades(connection):
         except ValueError:      
             print("Enter Valid Number.")
 
+# Export to CSV File
+def export_to_csv(connection):
+    try:
+        with connection:
+
+            query = "SELECT * FROM trades"
+            # Cursor: Description for headers Data
+            cursor = connection.cursor()
+            cursor.execute(query)
+
+            # Headers
+            headers = [description[0] for description in cursor.description]
+
+            # Row
+            rows = cursor.fetchall()
+            if not rows:
+                print("No trades found.")
+                return
+
+            # Save to CSV File
+            with open("trades_data.csv", 'w',) as file:
+
+                # Writer Object
+                writer = csv.writer(file)
+
+                # Write Row --> Header
+                writer.writerow(headers)
+
+                # Write Rows --> Actual Data
+                writer.writerows(rows)
+
+                print("Trade Exported Successfully")
+
+    except Exception as e:
+                    print(f"ERROR: {e}")
+
 # Main Function
 def main():
 
@@ -590,7 +627,8 @@ def main():
             print("📁 3.Show Summary")
             print("🔍 4.Filter Trades")
             print("🏳️ 5.Delete Trades")
-            print("❌ 6.Exit")
+            print("🚝 6. Expot To CSV")
+            print("❌ 7.Exit")
             print("=========================")
 
             try:
@@ -618,8 +656,12 @@ def main():
                 elif user == 5:
                     delete_trade(connection)  
 
-                # Break
+                # Export To CSV
                 elif user == 6:
+                    export_to_csv(connection)
+
+                # Break
+                elif user == 7:
                     print("Goodbye!")
                     break
 
@@ -634,3 +676,4 @@ def main():
 # Calling
 if __name__ == "__main__":
     main()
+    
