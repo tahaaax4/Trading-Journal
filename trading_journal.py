@@ -69,7 +69,7 @@ def add_trade():
             print("Enter valid numbers")
 
     # Timeframe
-    timeframe = input("Timeframe: ").strip()
+    timeframe = input("Timeframe: ").upper().strip()
 
     # Result
     while True:
