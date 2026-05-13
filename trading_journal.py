@@ -69,7 +69,7 @@ def add_trade():
             print("Enter valid numbers")
 
     # Timeframe
-        timeframe = input("Timeframe: ").upper().strip()
+    timeframe = input("Timeframe: ").strip()
 
     # Result
     while True:
@@ -96,7 +96,7 @@ def add_trade():
     # PROFIT/LOSS 
     while True:
         try:
-            profit_loss = float(input("Profit/Loss: "))
+            profit_loss = float(input("Profit/Loss in $: "))
             break
         except ValueError:
             print("Enter valid number")
