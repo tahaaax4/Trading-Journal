@@ -44,7 +44,7 @@ def create_table(connection):
 def add_trade():
 
     date = input("Date: ").strip()
-    pair = input("Pair: ").capitalize().strip()
+    pair = input("Pair: ").upper().strip()
 
     # Position
     while True:
